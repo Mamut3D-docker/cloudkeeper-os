@@ -33,6 +33,7 @@ CONF = cfg.CONF
 LOG = log.getLogger(__name__)
 IMAGE_ID_TAG = constants.IMAGE_ID_TAG
 IMAGE_LIST_ID_TAG = constants.IMAGE_LIST_ID_TAG
+IMAGE_FOR_DELETION_TAG = constants.IMAGE_FOR_DELETION_TAG
 
 
 def retrieve_image(appliance):
@@ -59,7 +60,7 @@ def retrieve_image(appliance):
     return filename
 
 
-def find_image(glance_client, identifier, image_list_identifier):
+def find_image(glance_client, identifier, image_list_identifier, only_unmarked=False):
     """Search for a glance image given a appliance and image list identifiers
     """
     filters = {IMAGE_ID_TAG: identifier,
@@ -68,14 +69,19 @@ def find_image(glance_client, identifier, image_list_identifier):
     img_generator = glance_client.images.list(**kwargs)
     image_list = list(img_generator)
 
+    if only_unmarked:
+        for image in image_list:
+            if IMAGE_FOR_DELETION_TAG in image:
+                image_list.remove(image)
+
     if len(image_list) > 1:
-        LOG.error("Multiple images found with the same properties "
+        LOG.debug("Multiple images found with the same properties "
                   "(%s: %s, %s: %s)" % (IMAGE_ID_TAG, identifier,
                                         IMAGE_LIST_ID_TAG,
                                         image_list_identifier))
         return None
     elif len(image_list) == 0:
-        LOG.error("No image found with the following properties "
+        LOG.debug("No image found with the following properties "
                   "(%s: %s, %s: %s)" % (IMAGE_ID_TAG, identifier,
                                         IMAGE_LIST_ID_TAG,
                                         image_list_identifier))
