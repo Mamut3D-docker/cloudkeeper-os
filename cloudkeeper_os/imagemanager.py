@@ -113,17 +113,54 @@ class ApplianceManager(object):
 
         return glance_image.id
 
+    def update_appliance_metadata(self, appliance):
+        """Add an appliance to glance
+        """
+        project_name = self.mapping.get_project_from_vo(appliance.vo)
+        if not project_name:
+            LOG.error("Cannot get a project name mapped to the "
+                      "vo '%s'" % appliance.vo)
+            return None
+
+        glance = openstack_client.get_glance_client(project_name)
+        if not glance:
+            LOG.error("Cannot get a glance client for the "
+                      "project '%s'" % project_name)
+            return None
+
+        LOG.info('Updating metadata of appliance: ' + appliance.title)
+
+        properties = utils.extract_appliance_properties(appliance)
+        min_ram = int(properties.get("APPLIANCE_RAM", 0))
+
+        LOG.debug("Updating metadata for image '%s' (format: '%s', "
+                  "properties %s)" % (appliance.title,
+                                      str.lower(image_format),
+                                      properties)
+                 )
+
+        glance_image = utils.find_image(glance, appliance.identifier,
+                                        appliance.image_list_identifier,
+                                        True)
+        glance.images.update(glance_image.id, **properties)
+        return glance_image.id
+
     def update_appliance(self, appliance):
         """Update an appliance stored in glance
         """
-        LOG.info("Updating image: '%s'" % appliance.identifier)
-        LOG.debug("Marking old release of the appliance for removal")
-        old_image_id = self.mark_appliance(appliance)
-        LOG.debug("The glance image '%s' has been marked for removal" % old_image_id)
-        LOG.debug("Creating new release of the appliance")
-        image_id = self.add_appliance(appliance)
-        LOG.debug("The glance image '%s' has been created" % image_id)
+        if appliance.image.uri:
+            LOG.info("Updating image: '%s'" % appliance.identifier)
+            LOG.debug("Marking old release of the appliance for removal")
+            old_image_id = self.mark_appliance(appliance)
+            LOG.debug("The glance image '%s' has been marked for removal" % old_image_id)
+            LOG.debug("Creating new release of the appliance")
+            image_id = self.add_appliance(appliance)
+            LOG.debug("The glance image '%s' has been created" % image_id)
+        else:
+            LOG.info("Updating image metadata: '%s'" % appliance.identifier)
+            image_id = self.update_appliance_metadata(appliance)
         return image_id
+
 
 
     def mark_appliance(self, appliance):
