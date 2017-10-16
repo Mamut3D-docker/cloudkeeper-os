@@ -133,11 +133,8 @@ class ApplianceManager(object):
         properties = utils.extract_appliance_properties(appliance)
         min_ram = int(properties.get("APPLIANCE_RAM", 0))
 
-        LOG.debug("Updating metadata for image '%s' (format: '%s', "
-                  "properties %s)" % (appliance.title,
-                                      str.lower(image_format),
-                                      properties)
-                 )
+        LOG.debug("Updating metadata for image '%s' "
+                  "(properties %s)" % (appliance.title, properties))
 
         glance_image = utils.find_image(glance, appliance.identifier,
                                         appliance.image_list_identifier,
